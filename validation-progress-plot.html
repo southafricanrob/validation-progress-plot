@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validation Progress Plot</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPGNpcmNsZSBjeD0iMzIiIGN5PSIzMiIgcj0iMzIiIGZpbGw9IiMwYjliZDkiLz4KPC9zdmc+">
+
+
+    <style>
+        body {
+            font-family: Poppins, sans-serif;
+            margin: 10px;
+        }
+        .label {
+            pointer-events: none;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+            max-width: 90vw;
+            margin: auto;
+        }
+        .control-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .slider-container {
+            margin-left: 10px;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+        }
+        #controls {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            height: fit-content;
+            display: flex;
+            flex-direction: column;
+            gap:15px;
+        }
+        .controlblock-title {
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .control-row {
+                display: flex;
+                flex-direction: row;
+                gap: 10px;
+            }
+        .control-block {
+            width: 25%;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+            padding: 5px;
+        }
+        .control-wrapper label{
+            width:150px;
+            font-size: 0.9rem;
+            font-weight: 300;
+        }
+        @media(max-width:768px){
+            .control-wrapper{
+            flex-direction: column;
+            }
+            .control-wrapper label{
+                width:unset;
+            }
+        }
+        .slider-container > span{
+            font-size: 0.9rem;
+            font-weight: 300;
+        }
+        .file-input-button , #exportButton{
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0b9bd9;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        #splashScreen .file-input-button {
+            padding: 15px 30px;
+        } 
+        .buttons {
+            display: flex;
+            gap: 15px;
+        }
+        .file-input-button:hover , #exportButton:hover{
+            background-color: #1e90ff;
+        }
+        input[type="color"] {
+            border: none;
+        }
+        #splashScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.97);
+            color: #fff;
+            z-index: 9999;
+            font-family: Poppins;
+        }
+        #splashScreen button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            color: #3e3e3e;
+            border-radius: 2px;
+        }
+        #csvFormatTable {
+            margin: 20px auto 5px auto;
+            border-collapse: collapse;
+            width: 100%;
+            border: 0px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden; /* This will apply the border-radius to the table */
+            background: #5e5e5e;
+            max-width: 600px;
+        }
+        #csvFormatTable th, #csvFormatTable td {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 8px;
+            text-align: center;
+        }
+        #csvFormatTable th {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .subtitle{
+            margin-bottom: 0px;
+        }
+        .subtitle-details{
+            font-size: 0.95em;
+            font-weight: 300;
+            margin-bottom: 20px;
+        }
+        #splashContent{
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-content: center;
+            align-items: center;
+            max-width: 90%;
+        }
+        .circle-o {
+            display: inline-block;
+            width: 0.7em;
+            height: 0.7em;
+            border-radius: 50%;
+            background-color: #0b9bd9;
+            vertical-align: middle;
+        }
+        #title{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 0;
+        }
+        .title-line {
+            display: block;
+            font-size: 80px;
+            line-height: 1.2em;
+        }
+        .second-line{
+            font-size: 40px;
+        }
+        @media(max-width:768px){
+            .title-line {
+                font-size: 60px;
+            }
+
+            .second-line{
+                font-size: 38px;
+            }
+        }
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.4);
+        }
+        #chart-title {
+            text-align: center;
+        }
+        #colorPickersContainer {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        /* General styling for range sliders */
+        .range-slider {
+            width: 100%;
+            height: 6px;
+            background: #ddd;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+        }
+        .range-slider:hover {
+            opacity: 1;
+        }
+        .range-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #0b9bd9;
+            cursor: pointer;
+            border-radius: 50%;
+            margin-top: -5px; /* Center the thumb */
+
+        }
+        .range-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #0b9bd9;
+            cursor: pointer;
+            border-radius: 50%;
+            margin-top: -5px; /* Center the thumb */
+
+        }
+        .range-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #ddd;
+            border-radius: 5px;
+        }
+        .range-slider::-moz-range-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #ddd;
+            border-radius: 5px;
+        }
+        .range-slider:active::-webkit-slider-runnable-track {
+            background: #ccc;
+        }
+        .range-slider:active::-moz-range-track {
+            background: #ccc;
+        }
+        #scatterplot text {
+            font-family: 'Poppins', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div id="splashScreen">
+        <svg id="splashBackground" width="100%" height="100%">
+            <!-- Circles will be dynamically added here -->
+        </svg>
+        <div id="splashContent">
+        <h1 id="title">
+            <span class="title-line">Validati<span class="circle-o"></span>n</span>
+            <div class="divider"></div>
+            <span class="title-line second-line">Progress Plot</span>
+        </h1>
+            <h3 class="subtitle">The format of your CSV should be:</h3>
+            <table id="csvFormatTable">
+                <tr>
+                    <th>Team</th>
+                    <th>Evidence Level</th>
+                    <th>Opportunity Size</th>
+                    <th>Cohort</th>
+                </tr>
+                <tr>
+                    <td>Team A</td>
+                    <td>2</td>
+                    <td>10000</td>
+                    <td>2024</td>
+                </tr>
+                <tr>
+                    <td>Team B</td>
+                    <td>4</td>
+                    <td>60000</td>
+                    <td>2023</td>
+                </tr>
+                <tr>
+                    <td>Team C</td>
+                    <td>1</td>
+                    <td>1000000</td>
+                    <td>2024</td>
+                </tr>
+            </table>
+            <span class="subtitle-details">Header row values set the X & Y axis values & chart title </span>
+            <label for="fileInput" class="file-input-button">
+                ⇪ Choose CSV File
+            </label>
+            <input type="file" id="fileInput" accept=".csv" style="display: none;">
+        </div>
+    </div>
+
+
+    <h2 id="chart-title">Opportunity Size vs Evidence Levels</h2>
+    <div class="container" id="mainContent">
+        <div id="scatterplot"></div>
+        <div id="controls">
+            <div class="control-row">
+                <div class="control-block bubble-controls">
+                    <div class="controlblock-title">Bubble Controls:</div>
+                    <div class="control-wrapper">
+                        <label for="forceCollideDistance">Spread overlapping bubbles:</label>
+                        <div class="slider-container">
+                            <span id="forceCollideDistanceValue">10</span>
+                            <input type="range" class="range-slider" id="forceCollideDistance" value="15" min="0" max="20" step="1">
+                        </div>
+                    </div>
+
+                    <div class="control-wrapper">
+                        <label for="bubbleSize">Bubble Size:</label>
+                        <div class="slider-container">
+                            <span id="bubbleSizeValue">20</span>
+                            <input type="range" class="range-slider" id="bubbleSize" value="20" min="5" max="30" step="2">
+                        </div>
+                    </div>
+
+                </div>
+                <div class="control-block label-controls">
+                    <div class="controlblock-title">Label Controls:</div>
+                    <div class="control-wrapper">
+                        <label for="labelFontSize">Label Size:</label>
+                        <div class="slider-container">
+                            <span id="labelFontSizeValue">12</span>
+                            <input type="range" class="range-slider" id="labelFontSize" value="12" min="8" max="16" step="1">
+                        </div>
+                    </div>
+
+                    <div class="control-wrapper">
+                        <label for="labelDistance">Label Distance:</label>
+                        <div class="slider-container">
+                            <span id="labelDistanceValue">16</span>
+                            <input type="range" class="range-slider" id="labelDistance" value="16" min="0" max="50" step="1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-block revenue-controls">
+                    <div class="controlblock-title">Revenue Controls:</div>
+                    <div class="control-wrapper">
+                        <label for="constantParameter">Log scale for Opp Size from:</label>
+                        <div class="slider-container">
+                            <span id="constantParameterValue">500000</span>
+                            <input type="range" class="range-slider" id="constantParameter" value="500000" min="50000" max="5000000" step="50000">
+                        </div>
+                    </div>
+                    <div class="control-wrapper">
+                        <label for="revenueThreshold">Highlight revenue above:</label>
+                        <div class="slider-container">
+                            <span id="revenueThresholdValue">1000000</span>
+                            <input type="range" class="range-slider" id="revenueThreshold" value="1000000" min="500000" max="2000000" step="50000">
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="control-block colors">
+                    <div class="controlblock-title">Color Controls:</div>
+                    <div id="colorPickersContainer"></div>
+                </div>
+            </div>
+            <div class="control-row">
+                <div class="buttons">
+                    <!-- <div class="control-wrapper"> -->
+                        <label for="fileInput" class="file-input-button">
+                            ⇪ Choose another CSV
+                        </label>
+                        <input type="file" id="fileInput" accept=".csv" style="display: none;">
+                    <!-- </div> -->
+                    <button id="exportButton">Export as PNG</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+
+
+        // JavaScript to create circles in the splash screen SVG
+        const svg = d3.select("#splashBackground");
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        // Generate random circles
+        for (let i = 0; i < 100; i++) {
+            svg.append("circle")
+                .attr("cx", Math.random() * width)
+                .attr("cy", Math.random() * height)
+                .attr("r", Math.random() * 30)
+                .attr("fill", "rgba(255, 255, 255, 0.1)");
+        }
+
+
+        let csvData;
+        let colors = {};
+
+        // Update slider values
+        function updateSliderValue(id, value) {
+            let formattedValue;
+            if (id === "constantParameter" || id === "revenueThreshold") {
+                formattedValue = (value >= 1000) ? (value / 1000) + 'k' : value;
+            } else {
+                formattedValue = Number(value).toLocaleString('en-US', { minimumIntegerDigits: 1, useGrouping: true });
+            }
+            document.getElementById(id + 'Value').textContent = formattedValue;
+        }
+
+        // Handle CSV file input
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                csvData = d3.csvParse(text);
+                updateColorPickers(csvData);
+                reloadChart();
+
+                // Hide the splash screen and show the main content
+                document.getElementById('splashScreen').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+
+                 // JavaScript to set title 
+                const xAxisLabel = csvData.columns[1];
+                const yAxisLabel = csvData.columns[2];
+                const chartTitle = document.getElementById('chart-title');
+                chartTitle.innerHTML = `${xAxisLabel} vs ${yAxisLabel}`;
+            };
+            reader.readAsText(file);
+        });
+
+        function updateColorPickers(data) {
+            const colorDomainLabel = data.columns[3];
+            const uniqueValues = [...new Set(data.map(d => d[colorDomainLabel]))];
+            const container = document.getElementById("colorPickersContainer");
+            container.innerHTML = "";
+
+            uniqueValues.forEach((value, index) => {
+                const wrapperDiv = document.createElement("div");
+                wrapperDiv.classList.add("edit-color-wrap");
+
+                const colorInput = document.createElement("input");
+                colorInput.type = "color";
+                colorInput.value = colors[value] || getPredefinedColor();
+                colorInput.addEventListener("input", function() {
+                    colors[value] = colorInput.value;
+                    reloadChart();
+                });
+
+                const label = document.createElement("label");
+                label.innerText = value;
+
+                wrapperDiv.appendChild(label);
+                wrapperDiv.appendChild(colorInput);
+                container.appendChild(wrapperDiv);
+
+                colors[value] = colorInput.value;
+            });
+        }
+
+        const predefinedColors = [
+            "#46ddab",
+            "#2a798d",
+            "#fbe727",
+            "#355f8e",
+            "#bbde2c",
+            "#7bd051",
+            "#482574",
+            "#2c908c",
+            "#404485"
+        ];
+        let colorIndex = 0;
+
+        function getPredefinedColor() {
+            const color = predefinedColors[colorIndex % predefinedColors.length];
+            colorIndex++;
+            return color;
+        }
+
+        // Reload chart with updated parameters
+        function reloadChart() {
+            if (!csvData) return;
+
+            // Helper function to round down to the nearest 50000
+            function roundDownToNearest50000(value) {
+                return Math.floor(value / 50000) * 50000;
+            }
+
+            // Get the max & min values for Revenue
+            const yAxisName = csvData.columns[2]; 
+            const maxRevenue = d3.max(csvData, d => +d[yAxisName]);
+            let minRevenue = d3.min(csvData, d => +d[yAxisName]);
+
+            // Round the min values down to the nearest 50000
+            minRevenue = roundDownToNearest50000(minRevenue);
+
+            //set the sliders max & min to these values
+            // document.getElementById("constantParameter").min = minRevenue;
+            document.getElementById("revenueThreshold").min = minRevenue;
+            document.getElementById("constantParameter").max = maxRevenue;
+            document.getElementById("revenueThreshold").max = maxRevenue;
+
+            const bubbleSize = +document.getElementById("bubbleSize").value;
+            const labelFontSize = +document.getElementById("labelFontSize").value;
+            const constantParameter = +document.getElementById("constantParameter").value;
+            const forceCollideDistance = +document.getElementById("forceCollideDistance").value;
+            const labelDistance = +document.getElementById("labelDistance").value;
+            const revenueThreshold = +document.getElementById("revenueThreshold").value;
+
+            updateSliderValue("bubbleSize", bubbleSize);
+            updateSliderValue("labelFontSize", labelFontSize);
+            updateSliderValue("constantParameter", constantParameter);
+            updateSliderValue("forceCollideDistance", forceCollideDistance);
+            updateSliderValue("labelDistance", labelDistance);
+            updateSliderValue("revenueThreshold", revenueThreshold);
+
+            drawChart(csvData, colors, {
+                bubbleSize, labelFontSize, constantParameter, forceCollideDistance, labelDistance, revenueThreshold
+            });
+        }
+
+        // Draw the chart
+        function drawChart(data, colors, { bubbleSize, labelFontSize, constantParameter, forceCollideDistance, labelDistance, revenueThreshold }) {
+            d3.select("#scatterplot").selectAll("*").remove();
+            const maxWidth = 1400;
+            const containerWidth = Math.min(window.innerWidth * 0.9, maxWidth);
+    
+            const margin = { top: 40, right: 240, bottom: 50, left: 60 },
+                width = containerWidth - margin.left - margin.right,
+                height = 600 - margin.top - margin.bottom;
+
+            const svg = d3.select("#scatterplot")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const xAxisLabel = data.columns[1];
+            const yAxisLabel = data.columns[2];
+            const colorDomainLabel = data.columns[3];
+            const teamLabel = data.columns[0];
+
+            data.forEach(d => {
+                d[xAxisLabel] = +d[xAxisLabel];
+                d[yAxisLabel] = +d[yAxisLabel];
+            });
+
+            const maxEvidence = Math.max(5, d3.max(data, d => +d[xAxisLabel]));
+            const yDomainMax = d3.max(data, d => d[yAxisLabel]) * 1.1;
+
+            const x = d3.scaleLinear()
+                .domain([-0.1, maxEvidence])
+                .range([0, width]);
+
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(d3.axisBottom(x).ticks(5));
+
+            // Add X axis label
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", width / 2 + margin.left)
+                .attr("y", height + 40 )
+                .style("font-family", "Poppins") // Apply Poppins font here
+                .text(xAxisLabel);
+
+            // Add Y axis label
+            svg.append("text")
+                .attr("text-anchor", "end")
+                .attr("x", -height / 2 - 40 + margin.top)
+                .attr("y", -40)
+                .attr("transform", "rotate(-90)")
+                .style("font-family", "Poppins") // Apply Poppins font here
+                .text(yAxisLabel);
+
+            const y = d3.scaleSymlog()
+                .domain([-0.1, yDomainMax])
+                .range([height, 0])
+                .constant(constantParameter);
+
+            svg.append("g")
+                .call(d3.axisLeft(y).ticks(5, "~s"));
+
+            const color = d3.scaleOrdinal()
+                .domain([...new Set(data.map(d => d[colorDomainLabel]))])
+                .range(Object.values(colors));
+
+            const sortedColorDomain = [...new Set(data.map(d => d[colorDomainLabel]))].sort((a, b) => d3.descending(a, b));
+
+            // Update the color scale domain with sorted values
+            color.domain(sortedColorDomain);
+
+
+            const legend = svg.selectAll(".legend")
+                .data(sortedColorDomain)
+                .enter().append("g")
+                .attr("class", "legend")
+                .attr("transform", (d, i) => `translate(140,${i * 32})`);
+
+
+            legend.append("rect")
+                .attr("x", width + 20)
+                .attr("width", 20)
+                .attr("height", 20)
+                .style("rx", 4)  // Add border radius for corners
+                .style("ry", 4) // Add border radius for corners
+                .style("fill", d => colors[d]);
+
+            legend.append("text")
+                .attr("x", width + 44)
+                .attr("y", 9)
+                .attr("dy", ".35em")
+                .style("text-anchor", "start")
+                .style("font-family", "Poppins") // Apply Poppins font here
+                .text(d => d);
+
+            const simulation = d3.forceSimulation(data)
+                .force("x", d3.forceX(d => x(d[xAxisLabel])).strength(0.2))
+                .force("y", d3.forceY(d => y(d[yAxisLabel])).strength(0.2))
+                .force("collide", d3.forceCollide(bubbleSize/3 + forceCollideDistance).strength(2)) //ensure bubbles don't completely overlap 
+                .stop();
+
+            for (let i = 0; i < 120; ++i) simulation.tick();
+
+            const node = svg.append("g")
+                .attr("class", "nodes")
+                .selectAll("circle")
+                .data(data)
+                .enter().append("circle")
+                .attr("class", "bubble")
+                .attr("cx", d => d.x)
+                .attr("cy", d => d.y)
+                .attr("r", d => +d[yAxisLabel] < revenueThreshold ? bubbleSize/2 : bubbleSize)  // Conditional size
+                .attr("opacity", d => +d[yAxisLabel] < revenueThreshold ? "0.3" : "0.7")  // Conditional opacity
+                .style("fill", d => colors[d[colorDomainLabel]]);
+
+                const labels = svg.append("g")
+                    .attr("class", "labels")
+                    .selectAll("text")
+                    .data(data)
+                    .enter()
+                    .append("text")
+                    .attr("class", "label")
+                    .attr("font-size", `${labelFontSize}px`)
+                    .attr("opacity", d => +d[yAxisLabel] < revenueThreshold ? "0.5" : "1")  // Conditional opacity
+                    .style("font-family", "Poppins") // Apply Poppins font here
+                    .attr("text-anchor", "middle")
+                    .text(d => d[teamLabel]);
+
+                // Create a force simulation to avoid overlapping labels
+                const forceSimulationLabels = d3.forceSimulation(data)
+                    .force("x", d3.forceX(d => d.x + labelDistance * 1).strength(1))
+                    .force("y", d3.forceY(d => d.y - labelDistance / 3).strength(1))
+                    .force("collide", d3.forceCollide(10)) // Adjust radius as needed
+                    .stop();
+
+                for (let i = 0; i < 120; ++i) forceSimulationLabels.tick();
+
+                labels
+                    .attr("x", d => d.x)
+                    .attr("y", d => d.y);
+
+
+                // Inside the drawChart function, where you handle mouseover and mouseout events
+                node.on("mouseover", function(event, d) {
+                    // Show tooltip
+                    const tooltip = d3.select("#scatterplot").append("div")
+                        .attr("class", "tooltip")
+                        .style("opacity", 0);
+
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", 1);
+
+                    const xAxisLabel = csvData.columns[1]; // Assuming this is the label for x-axis
+                    const yAxisLabel = csvData.columns[2]; // Assuming this is the label for y-axis
+
+                    tooltip.html(`${xAxisLabel}: ${d[xAxisLabel]}<br/>${yAxisLabel}: ${d[yAxisLabel]}`)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 28) + "px")
+                        .style("position", "absolute") // Ensure tooltip position is absolute
+                        .style("pointer-events", "none") // Prevent tooltip from blocking mouse events on bubbles
+                        .style("background", "rgba(255, 255, 255, 0.9)") // Adjust tooltip background
+                        .style("font-family", "Poppins") // Apply Poppins font here
+                        .style("font-size", `${labelFontSize}px`)
+                        .style("box-shadow", "0 0 10px rgba(0,0,0,0.1)") // Add box-shadow
+                        .style("padding", "8px"); // Adjust tooltip padding
+                })
+                .on("mouseout", function(d) {
+                    // Hide tooltip
+                    d3.select(".tooltip").remove();
+                });
+
+        }
+        //Export as a PNG
+        document.getElementById('exportButton').addEventListener('click', function() {
+            html2canvas(document.getElementById('scatterplot'), {
+                scale: 4,  // Increase scale for higher resolution
+                useCORS: true,  // Use CORS to ensure the fonts are loaded
+                logging: true,  // Optional, useful for debugging
+                onclone: (clonedDoc) => {
+                    // Ensure Poppins font is applied in the cloned document
+                    clonedDoc.querySelector('head').appendChild(
+                        document.querySelector('link[href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700&display=swap"]').cloneNode()
+                    );
+                }
+            }).then(canvas => {
+                canvas.toBlob(function(blob) {
+                    let link = document.createElement('a');
+                    link.download = 'scatterplot.png';
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                }, 'image/png');
+            });
+        });
+
+       // Add event listeners to all range sliders & update labels if overlap
+        document.querySelectorAll("input[type=range]").forEach(input => {
+            input.addEventListener("input", function() {
+                reloadChart(); // Optionally reload the chart as well
+            });
+        });
+    </script>
+</body>
+</html>
